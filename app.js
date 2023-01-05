@@ -29,7 +29,8 @@ mongoose.connect("mongodb://localhost:27017/userDB");
 const userSchema = new mongoose.Schema({
     email: String,
     password: String,
-    googleId: String
+    googleId: String,
+    secret: String
 });
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -81,8 +82,19 @@ app.get("/register", (req, res) => {
     res.render("register");
 });
 app.get("/secrets", (req, res) => {
+    User.find({"secret":{$ne:null}},(err,foundUsers)=>{
+        if(err){
+            console.log(err);
+        }else{
+            if(foundUsers){
+                res.render("secrets",{usersWithSecrets: foundUsers});
+            }
+        }
+    });
+});
+app.get("/submit",(req,res)=>{
     if (req.isAuthenticated()) {
-        res.render("secrets");
+        res.render("submit");
     } else {
         res.redirect("/login");
     }
@@ -124,7 +136,22 @@ app.post("/login", (req, res) => {
         }
     })
 });
-
+app.post("/submit",(req,res)=>{
+    const submittedSecret = req.body.secret;
+    console.log(req.user.id);
+    User.findById(req.user.id,(err,foundUser)=>{
+        if(err){
+            console.log(err);
+        }else{
+            if(foundUser){
+                foundUser.secret = submittedSecret;
+                foundUser.save(()=>{
+                    res.redirect("/secrets");
+                });
+            }
+        }
+    });
+});
 app.listen(3000, () => {
     console.log("server started at 3000 port");
 });
